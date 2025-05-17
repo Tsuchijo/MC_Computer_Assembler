@@ -1,0 +1,3 @@
+/Users/tsuchijo/Documents/MinecraftComputerAssembly/build/CMakeFiles/assembler.dir
+/Users/tsuchijo/Documents/MinecraftComputerAssembly/build/CMakeFiles/edit_cache.dir
+/Users/tsuchijo/Documents/MinecraftComputerAssembly/build/CMakeFiles/rebuild_cache.dir

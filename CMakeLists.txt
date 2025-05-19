@@ -8,4 +8,7 @@ set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 # Add the executable
-add_executable(assembler src/main.cpp)
+add_executable(assembler
+    src/main.cpp
+    src/Assembler.cpp
+)

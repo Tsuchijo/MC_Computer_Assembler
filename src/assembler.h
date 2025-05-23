@@ -18,7 +18,7 @@ class Assembler {
     private:
         void parseMacroDefinition(std::vector<std::string>::iterator& currentLine, 
                                   const std::vector<std::string>::iterator& end);
-        void parseMacroInvocation(const std::string& line);
+        void parseMacroInvocation(const std::string& line, std::vector<std::string>& instructions);
 
         // Struct definition goes inside the class if it's only used by this class
         struct MacroDefinition {
@@ -31,11 +31,14 @@ class Assembler {
         std::unordered_map<std::string, MacroDefinition> macroTable;
 
         std::unordered_map<std::string, std::string> opcodeTable;
-        std::vector<std::string> instructions;
+        std::vector<std::string> discInstructions;
         std::vector<std::string> assemblyFile;
 
         void removeComments(std::string& line);
         void trimWhitespace(std::string& line);
         bool isValidOpcode(const std::string& opcode);
         bool isValidMacroParameter(const std::string& line, const MacroDefinition& macro);
+        bool isValidMacroInvocation(const std::string& line);
+        void findParameters(const std::string& line, std::vector<std::string>& parameters);
+        const int MAX_NESTED_MACRO_DEPTH = 1024;
 };

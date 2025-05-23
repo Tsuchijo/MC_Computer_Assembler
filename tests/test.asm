@@ -6,6 +6,10 @@ def abc(a,b,c)
     c
 end
 
+def unused()
+    JMP
+end
+
 DA8
 LD 
 JMP

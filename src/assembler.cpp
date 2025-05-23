@@ -5,6 +5,7 @@
 #include "assembler.h"
 
 
+
 Assembler::Assembler(const std::string& inputFile) {
     // Initialize the opcode table
     opcodeTable = {
@@ -85,34 +86,55 @@ void Assembler::assemble(){
         std::string line = *it;
         removeComments(line);
         trimWhitespace(line);
-        std::cout << "Line: " << line << std::endl;
         if (!line.empty()) {
-            // Check if the line is a macro definition
             if (line.substr(0, 4) == "def ") {
                 parseMacroDefinition(it, end);
+                // Don't increment it here - parseMacroDefinition already moved it
             } else {
-                // Add the line to the assembly file
                 newAssemblyFile.push_back(line);
+                ++it;  // Only increment for non-macro lines
             }
+        } else {
+            ++it;  // Increment for empty lines
         }
-        ++it;
     }
     assemblyFile = newAssemblyFile;  // Update the assembly file with the new lines
 
     std::cout << "Second pass: parsing macro invocations and generating instructions." << std::endl;
-    // Second pass: parse macro invocations and generate instructions
-    for (const auto& line : assemblyFile) {
-        // Check if the line is a macro invocation
-        if (line.find('(') != std::string::npos && line.find(')') != std::string::npos) {
-            parseMacroInvocation(line);
-        } else {
-            // Check if the line is an opcode
-            auto it = opcodeTable.find(line);
-            if (it != opcodeTable.end()) {
-                instructions.push_back(it->second);
+    // Second pass: parse macro invocations
+    bool containsMacroInvocation = true;
+    int nestedMacroDepth = 0;
+    // Loop until no more macro invocations are found, to handle nested macros
+    while(containsMacroInvocation && nestedMacroDepth < MAX_NESTED_MACRO_DEPTH) {
+        std::vector<std::string> instructions;
+        containsMacroInvocation = false;
+        for (const auto& line : assemblyFile) {
+            // Check if the line is a macro invocation
+            if (isValidMacroInvocation(line)) {
+                parseMacroInvocation(line, instructions);
+                containsMacroInvocation = true;
             } else {
-                std::cerr << "Unknown instruction: " << line << std::endl;
+                // Check if the line is a valid opcode
+                if (isValidOpcode(line)) {
+                    instructions.push_back(line);
+                } else {
+                    std::cerr << "Error: Invalid opcode or macro invocation: " << line << std::endl;
+                }
             }
+        }
+        assemblyFile = instructions;  // Use the generated instructions for the next pass
+        ++nestedMacroDepth;
+    }
+    if (nestedMacroDepth == MAX_NESTED_MACRO_DEPTH) {
+        std::cerr << "Error: Maximum nested macro depth exceeded." << std::endl;
+    }
+    // Generate the final instructions
+    for (const auto& line : assemblyFile) {
+        // Check if the line is a valid opcode
+        if (isValidOpcode(line)) {
+            discInstructions.push_back(line);
+        } else {
+            std::cerr << "Error: Invalid opcode or macro invocation: " << line << std::endl;
         }
     }
 }
@@ -139,6 +161,7 @@ bool Assembler::isValidOpcode(const std::string& line) {
     if (macroTable.find(line) != macroTable.end()) {
         return true;  // Found in macro table
     }
+    return false;  // Not found in either table
 }
 
 bool Assembler::isValidMacroParameter(const std::string& line, const MacroDefinition& macro) {
@@ -151,14 +174,26 @@ bool Assembler::isValidMacroParameter(const std::string& line, const MacroDefini
     return false;
 }
 
+bool Assembler::isValidMacroInvocation(const std::string& line) {
+    // Check if the line is a valid macro invocation
+    size_t openParenPos = line.find('(');
+    size_t closeParenPos = line.find(')');
+    if (openParenPos != std::string::npos && closeParenPos != std::string::npos && openParenPos < closeParenPos) {
+        std::string macroName = line.substr(0, openParenPos);
+        return macroTable.find(macroName) != macroTable.end();  // Found in macro table
+    }
+    return false;  // Not a valid macro invocation
+}
+
 void Assembler::writeOutput(const std::string& outputFile) {
     std::ofstream file(outputFile);
     if (!file) {
         std::cerr << "Error creating output file." << std::endl;
         return;
     }
-    for (const auto& instruction : instructions) {
-        file << instruction << std::endl;
+    for (const auto& instruction : discInstructions) {
+        auto it = opcodeTable.find(instruction);
+        file << it->second << std::endl;
     }
     file.close();
 }
@@ -168,9 +203,11 @@ void Assembler::writeOutputCommand(const std::string& outputFile) {
     if (!file) {
         std::cerr << "Error creating output file." << std::endl;
         return;
-    }
-    for (const auto& instruction : instructions) {
-        file << instruction << std::endl;
+    } 
+    for (const auto& instruction : discInstructions) {
+        // Convert opcode to command
+        auto it = opcodeTable.find(instruction);
+        file << it->second << std::endl;
     }
     file.close();
 }
@@ -184,6 +221,7 @@ void Assembler::parseMacroDefinition(std::vector<std::string>::iterator& current
     // Check if line starts with "def "
     if (line.substr(0, 4) != "def ") {
         // Not a macro definition, skip it
+        std::cerr << "Error: Invalid macro definition format. Expected: def macroName(param1, param2, ...)" << std::endl;
         ++currentLine;
         return;
     }
@@ -227,10 +265,11 @@ void Assembler::parseMacroDefinition(std::vector<std::string>::iterator& current
     ++currentLine;  // Move past the def line
     while (currentLine != end) {
         if (*currentLine == "end") {
+            std::cout << "End of macro definition: " << macro.name << std::endl;
             break;  // End of macro definition
         }
         // Check and make sure line is either a parameter or a valid instruction
-        if (!isValidMacroParameter(*currentLine, macro) && !isValidOpcode(*currentLine)) {
+        if (!isValidMacroParameter(*currentLine, macro) && !isValidOpcode(*currentLine) && !isValidMacroInvocation(*currentLine)) {
             std::cerr << "Error: Invalid instruction in macro body: " << *currentLine << std::endl;
             return;
         }
@@ -240,6 +279,7 @@ void Assembler::parseMacroDefinition(std::vector<std::string>::iterator& current
     
     // Make sure we found the "end" marker
     if (currentLine == end) {
+        std::cerr << "Error: Missing 'end' marker for macro definition" << std::endl;
         return;
     }
     
@@ -250,33 +290,85 @@ void Assembler::parseMacroDefinition(std::vector<std::string>::iterator& current
     ++currentLine;
 }
 
-void Assembler::parseMacroInvocation(const std::string& line) {
+void Assembler::findParameters(const std::string& line, std::vector<std::string>& parameters) {
+    // Implementation for finding parameters in a macro definition
+    size_t openParenPos = line.find('(');
+    size_t closeParenPos = line.find(')');
+    if (openParenPos != std::string::npos && closeParenPos != std::string::npos && openParenPos < closeParenPos) {
+        std::string paramList = line.substr(openParenPos + 1, closeParenPos - openParenPos - 1);
+        std::istringstream paramStream(paramList);
+        std::string param;
+        while (std::getline(paramStream, param, ',')) {
+            trimWhitespace(param);
+            if (!param.empty()) {
+                parameters.push_back(param);
+            }
+        }
+    }
+}
+
+void Assembler::parseMacroInvocation(const std::string& line, std::vector<std::string>& instructions) {
     // Implementation for parsing macro invocations
     std::string macroName = line.substr(0, line.find('('));
     auto it = macroTable.find(macroName);
     if (it != macroTable.end()) {
         MacroDefinition& macro = it->second;
         std::vector<std::string> arguments;
-        std::string params = line.substr(line.find('(') + 1, line.find(')') - line.find('(') - 1);
-        size_t pos = 0;
-        while ((pos = params.find(',')) != std::string::npos) {
-            arguments.push_back(params.substr(0, pos));
-            params.erase(0, pos + 1);
+        findParameters(line, arguments);
+
+        // trim whitespace from arguments and make sure they match the macro parameters
+        for (auto& arg : arguments) {
+            trimWhitespace(arg);
+            if (arguments.size() > macro.parameters.size()) {
+                std::cerr << "Error: Too many arguments for macro " << macroName << std::endl;
+                return;
+            }
+            else if (arguments.size() < macro.parameters.size()) {
+                std::cerr << "Error: Not enough arguments for macro " << macroName << std::endl;
+                return;
+            }
+            if (!isValidOpcode(arg) && !isValidMacroInvocation(arg)) {
+                std::cerr << "Error: Invalid argument for macro " << macroName << ": " << arg << std::endl;
+                return;
+            }
         }
-        arguments.push_back(params); // Add the last argument
 
         // Replace parameters in the macro body with arguments
-        for (size_t i = 0; i < macro.parameters.size(); ++i) {
-            for (auto& bodyLine : macro.body) {
-                size_t paramPos = bodyLine.find(macro.parameters[i]);
-                if (paramPos != std::string::npos) {
-                    bodyLine.replace(paramPos, macro.parameters[i].length(), arguments[i]);
+        for(auto& bodyLine : macro.body) {
+            // For each line, if is not a macro call just check and replace if it is a parameter alone
+            if (!isValidMacroInvocation(bodyLine) && !isValidOpcode(bodyLine)) {
+                for (size_t i = 0; i < macro.parameters.size(); ++i) {
+                    std::string param = macro.parameters[i];
+                    std::string arg = arguments[i];
+                    size_t pos = bodyLine.find(param);
+                    if (pos != std::string::npos) {
+                        bodyLine.replace(pos, param.length(), arg);
+                    }
                 }
+            }
+            else if (isValidMacroInvocation(bodyLine)) {
+                std::vector<std::string> nestedParamNames;
+                findParameters(bodyLine, nestedParamNames);
+                for (size_t i = 0; i < nestedParamNames.size(); ++i) {
+                    for (size_t j = 0; j < macro.parameters.size(); ++j) {
+                        std::string param = macro.parameters[j];
+                        std::string nestedParam = nestedParamNames[i];
+                        std::string arg = arguments[j];
+                        // only search after the first '('
+                        size_t searchStart = bodyLine.find(nestedParam, bodyLine.find('('));
+                        size_t pos = bodyLine.find(nestedParam, searchStart);
+                        if (pos != std::string::npos) {
+                            bodyLine.replace(pos, nestedParam.length(), arg);
+                        }
+                    }
+                }
+                
             }
         }
 
         // Add the expanded macro body to the instructions
         for (const auto& bodyLine : macro.body) {
+            std::cout << "Adding line to instructions: " << bodyLine << std::endl;
             instructions.push_back(bodyLine);
         }
     } else {

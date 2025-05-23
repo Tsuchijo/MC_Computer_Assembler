@@ -1,4 +1,3 @@
-5
 chirp
 cat
 ward
@@ -13,3 +12,6 @@ blocks
 strad
 13
 mall
+JMP
+ JMP
+ JMP

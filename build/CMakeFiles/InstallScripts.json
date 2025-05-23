@@ -1,7 +1,7 @@
 {
 	"InstallScripts" : 
 	[
-		"C:/Users/Owner/Documents/Personal Projects/MinecraftAssembly/MC_Computer_Assembler/build/cmake_install.cmake"
+		"/Users/tsuchijo/Documents/MinecraftComputerAssembly/build/cmake_install.cmake"
 	],
 	"Parallel" : false
 }

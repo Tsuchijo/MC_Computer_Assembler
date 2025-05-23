@@ -78,15 +78,28 @@ bool Assembler::readAssemblyFile(const std::string& inputFile) {
 void Assembler::assemble(){
 
     // First pass: parse macro definitions, remove comments, and trim whitespace
-    auto it = assemblyFile.begin();
     auto end = assemblyFile.end();
+    auto it = assemblyFile.begin();
+    std::vector<std::string> newAssemblyFile;
     while (it != end) {
-        parseMacroDefinition(it, end);
-        removeComments(*it);
-        trimWhitespace(*it);
+        std::string line = *it;
+        removeComments(line);
+        trimWhitespace(line);
+        std::cout << "Line: " << line << std::endl;
+        if (!line.empty()) {
+            // Check if the line is a macro definition
+            if (line.substr(0, 4) == "def ") {
+                parseMacroDefinition(it, end);
+            } else {
+                // Add the line to the assembly file
+                newAssemblyFile.push_back(line);
+            }
+        }
         ++it;
     }
+    assemblyFile = newAssemblyFile;  // Update the assembly file with the new lines
 
+    std::cout << "Second pass: parsing macro invocations and generating instructions." << std::endl;
     // Second pass: parse macro invocations and generate instructions
     for (const auto& line : assemblyFile) {
         // Check if the line is a macro invocation
@@ -114,6 +127,28 @@ void Assembler::removeComments(std::string& line) {
 void Assembler::trimWhitespace(std::string& line) {
     line.erase(0, line.find_first_not_of(" \t"));
     line.erase(line.find_last_not_of(" \t") + 1);
+}
+
+bool Assembler::isValidOpcode(const std::string& line) {
+    // checks across opcode table and macro table
+    auto it = opcodeTable.find(line);
+    if (it != opcodeTable.end()) {
+        return true;  // Found in opcode table
+    }
+    // Check if it's a macro name
+    if (macroTable.find(line) != macroTable.end()) {
+        return true;  // Found in macro table
+    }
+}
+
+bool Assembler::isValidMacroParameter(const std::string& line, const MacroDefinition& macro) {
+    // Check if the line is a valid macro parameter
+    for (const auto& param : macro.parameters) {
+        if (line == param) {
+            return true;  // Found in macro parameters
+        }
+    }
+    return false;
 }
 
 void Assembler::writeOutput(const std::string& outputFile) {
@@ -160,7 +195,6 @@ void Assembler::parseMacroDefinition(std::vector<std::string>::iterator& current
     size_t openParenPos = defLine.find('(');
     if (openParenPos == std::string::npos) {
         std::cerr << "Error: Invalid macro definition format. Expected: def macroName(param1, param2, ...)" << std::endl;
-        ++currentLine;
         return;
     }
     
@@ -173,7 +207,6 @@ void Assembler::parseMacroDefinition(std::vector<std::string>::iterator& current
     size_t closeParenPos = defLine.find(')', openParenPos);
     if (closeParenPos == std::string::npos) {
         std::cerr << "Error: Missing closing parenthesis in macro definition" << std::endl;
-        ++currentLine;
         return;
     }
     
@@ -197,19 +230,9 @@ void Assembler::parseMacroDefinition(std::vector<std::string>::iterator& current
             break;  // End of macro definition
         }
         // Check and make sure line is either a parameter or a valid instruction
-        if (opcodeTable.find(*currentLine) == opcodeTable.end()) {
-            bool isParameter = false;
-            for (const auto& param : macro.parameters) {
-                if (*currentLine == param) {
-                    isParameter = true;
-                    break;
-                }
-            }
-            if (!isParameter) {
-                std::cerr << "Error: Invalid line in macro body: " << *currentLine << std::endl;
-                ++currentLine;
-                continue;  // Skip invalid lines
-            }
+        if (!isValidMacroParameter(*currentLine, macro) && !isValidOpcode(*currentLine)) {
+            std::cerr << "Error: Invalid instruction in macro body: " << *currentLine << std::endl;
+            return;
         }
         macro.body.push_back(*currentLine);
         ++currentLine;

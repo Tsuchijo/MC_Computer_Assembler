@@ -1,5 +1,11 @@
 ; Basic Test Code, Wait for input on Data 8 then execute 2 bit addition
 
+def abc(a,b,c)
+    a
+    b
+    c
+end
+
 DA8
 LD 
 JMP
@@ -15,3 +21,4 @@ XOR
 DA2
 XOR 
 OUT 
+abc(JMP, JMP, JMP)

@@ -36,4 +36,6 @@ class Assembler {
 
         void removeComments(std::string& line);
         void trimWhitespace(std::string& line);
+        bool isValidOpcode(const std::string& opcode);
+        bool isValidMacroParameter(const std::string& line, const MacroDefinition& macro);
 };

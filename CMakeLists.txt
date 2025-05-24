@@ -12,3 +12,6 @@ add_executable(assembler
     src/main.cpp
     src/Assembler.cpp
 )
+
+enable_testing()
+add_subdirectory(tests)

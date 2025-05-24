@@ -497,3 +497,44 @@ events:
       LTO support using: LLVM version 15.0.0 (static support for 29, runtime is 29)
       TAPI support using: Apple TAPI version 15.0.0 (tapi-1500.3.2.2)
 ...
+
+---
+events:
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/share/cmake/Modules/Internal/CheckSourceCompiles.cmake:104 (try_compile)"
+      - "/opt/homebrew/share/cmake/Modules/Internal/CheckCompilerFlag.cmake:18 (cmake_check_source_compiles)"
+      - "/opt/homebrew/share/cmake/Modules/CheckCXXCompilerFlag.cmake:55 (cmake_check_compiler_flag)"
+      - "build/_deps/catch2-src/CMake/CatchMiscFunctions.cmake:12 (check_cxx_compiler_flag)"
+      - "build/_deps/catch2-src/CMake/CatchMiscFunctions.cmake:119 (add_cxx_flag_if_supported_to_targets)"
+      - "build/_deps/catch2-src/src/CMakeLists.txt:342 (add_build_reproducibility_settings)"
+    checks:
+      - "Performing Test HAVE_FLAG__ffile_prefix_map__Users_tsuchijo_Documents_MinecraftComputerAssembly_build__deps_catch2_src__"
+    directories:
+      source: "/Users/tsuchijo/Documents/MinecraftComputerAssembly/build/CMakeFiles/CMakeScratch/TryCompile-zxuZs4"
+      binary: "/Users/tsuchijo/Documents/MinecraftComputerAssembly/build/CMakeFiles/CMakeScratch/TryCompile-zxuZs4"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: ""
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/Users/tsuchijo/Documents/MinecraftComputerAssembly/build/_deps/catch2-src/extras;/Users/tsuchijo/Documents/MinecraftComputerAssembly/build/_deps/catch2-src/CMake"
+      CMAKE_OSX_ARCHITECTURES: ""
+      CMAKE_OSX_DEPLOYMENT_TARGET: ""
+      CMAKE_OSX_SYSROOT: ""
+    buildResult:
+      variable: "HAVE_FLAG__ffile_prefix_map__Users_tsuchijo_Documents_MinecraftComputerAssembly_build__deps_catch2_src__"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/tsuchijo/Documents/MinecraftComputerAssembly/build/CMakeFiles/CMakeScratch/TryCompile-zxuZs4'
+        
+        Run Build Command(s): /opt/homebrew/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_6d185/fast
+        /Library/Developer/CommandLineTools/usr/bin/make  -f CMakeFiles/cmTC_6d185.dir/build.make CMakeFiles/cmTC_6d185.dir/build
+        Building CXX object CMakeFiles/cmTC_6d185.dir/src.cxx.o
+        /usr/bin/clang++ -DHAVE_FLAG__ffile_prefix_map__Users_tsuchijo_Documents_MinecraftComputerAssembly_build__deps_catch2_src__  -std=gnu++11 -arch arm64   -ffile-prefix-map=/Users/tsuchijo/Documents/MinecraftComputerAssembly/build/_deps/catch2-src/= -MD -MT CMakeFiles/cmTC_6d185.dir/src.cxx.o -MF CMakeFiles/cmTC_6d185.dir/src.cxx.o.d -o CMakeFiles/cmTC_6d185.dir/src.cxx.o -c /Users/tsuchijo/Documents/MinecraftComputerAssembly/build/CMakeFiles/CMakeScratch/TryCompile-zxuZs4/src.cxx
+        Linking CXX executable cmTC_6d185
+        /opt/homebrew/bin/cmake -E cmake_link_script CMakeFiles/cmTC_6d185.dir/link.txt --verbose=1
+        /usr/bin/clang++  -arch arm64 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cmTC_6d185.dir/src.cxx.o -o cmTC_6d185
+        
+      exitCode: 0
+...

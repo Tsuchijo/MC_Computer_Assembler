@@ -185,6 +185,18 @@ bool Assembler::isValidMacroInvocation(const std::string& line) {
     return false;  // Not a valid macro invocation
 }
 
+bool Assembler::isMacroInvocation(const std::string& line) {
+    // Check if the line is fomatted as a macro invocation, e.g., "macroName(param1, param2)"
+    // Does not check if the macro exists
+    size_t openParenPos = line.find('(');
+    size_t closeParenPos = line.find(')');
+    // check if it has a valid format
+    if (openParenPos != std::string::npos && closeParenPos != std::string::npos && openParenPos < closeParenPos) {
+        return true;  // Valid macro invocation format
+    }
+    return false;  // Not a valid macro invocation format
+}
+
 void Assembler::writeOutput(const std::string& outputFile) {
     std::ofstream file(outputFile);
     if (!file) {
@@ -269,7 +281,7 @@ void Assembler::parseMacroDefinition(std::vector<std::string>::iterator& current
             break;  // End of macro definition
         }
         // Check and make sure line is either a parameter or a valid instruction
-        if (!isValidMacroParameter(*currentLine, macro) && !isValidOpcode(*currentLine) && !isValidMacroInvocation(*currentLine)) {
+        if (!isValidMacroParameter(*currentLine, macro) && !isValidOpcode(*currentLine) && !isMacroInvocation(*currentLine)) {
             std::cerr << "Error: Invalid instruction in macro body: " << *currentLine << std::endl;
             return;
         }

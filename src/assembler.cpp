@@ -215,12 +215,34 @@ void Assembler::writeOutputCommand(const std::string& outputFile) {
     if (!file) {
         std::cerr << "Error creating output file." << std::endl;
         return;
-    } 
-    for (const auto& instruction : discInstructions) {
-        // Convert opcode to command
-        auto it = opcodeTable.find(instruction);
-        file << it->second << std::endl;
     }
+    
+    const int MAX_ITEMS_PER_SHULKER = 27;
+    int totalInstructions = discInstructions.size();
+    int shulkerCount = (totalInstructions + MAX_ITEMS_PER_SHULKER - 1) / MAX_ITEMS_PER_SHULKER;
+    
+    for (int shulkerIndex = 0; shulkerIndex < shulkerCount; ++shulkerIndex) {
+        int startIdx = shulkerIndex * MAX_ITEMS_PER_SHULKER;
+        int endIdx = std::min(startIdx + MAX_ITEMS_PER_SHULKER, totalInstructions);
+        
+        std::string shulkerName = "Program";
+        if (shulkerCount > 1) {
+            shulkerName += "_Part_" + std::to_string(shulkerIndex + 1);
+        }
+        
+        file << "/give @p shulker_box{display:{Name:'{\"text\":\"" << shulkerName << "\"}'},BlockEntityTag:{Items:[";
+        
+        for (int i = startIdx; i < endIdx; ++i) {
+            auto it = opcodeTable.find(discInstructions[i]);
+            if (it != opcodeTable.end()) {
+                if (i > startIdx) file << ",";
+                file << "{Slot:" << (i - startIdx) << "b,id:\"minecraft:music_disc_" << it->second << "\",Count:1b}";
+            }
+        }
+        
+        file << "]}}" << std::endl;
+    }
+    
     file.close();
 }
 

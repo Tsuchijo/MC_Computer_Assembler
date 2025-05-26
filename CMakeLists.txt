@@ -10,7 +10,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 # Add the executable
 add_executable(assembler
     src/main.cpp
-    src/Assembler.cpp
+    src/assembler.cpp
+    src/emulator.cpp
 )
 
 enable_testing()

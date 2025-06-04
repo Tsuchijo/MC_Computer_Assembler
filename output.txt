@@ -1,18 +1,1 @@
-5
-chirp
-cat
-ward
-chirp
-stal
-13
-mall
-mellohi
-blocks
-11
-13
-strad
-13
-mall
-cat
-cat
-cat
+/give @p shulker_box[custom_name='{"text":"Program"}',container=[{slot:0,item:{id:"music_disc_11",count:1}},{slot:1,item:{id:"music_disc_chirp",count:1}},{slot:2,item:{id:"music_disc_mellohi",count:1}},{slot:3,item:{id:"music_disc_mall",count:1}},{slot:4,item:{id:"music_disc_wait",count:1}},{slot:5,item:{id:"music_disc_chirp",count:1}},{slot:6,item:{id:"music_disc_mall",count:1}},{slot:7,item:{id:"music_disc_11",count:1}},{slot:8,item:{id:"music_disc_chirp",count:1}},{slot:9,item:{id:"music_disc_mall",count:1}},{slot:10,item:{id:"music_disc_wait",count:1}},{slot:11,item:{id:"music_disc_chirp",count:1}},{slot:12,item:{id:"music_disc_mall",count:1}}]] 1

@@ -216,33 +216,36 @@ void Assembler::writeOutputCommand(const std::string& outputFile) {
         std::cerr << "Error creating output file." << std::endl;
         return;
     }
-    
+
     const int MAX_ITEMS_PER_SHULKER = 27;
     int totalInstructions = discInstructions.size();
     int shulkerCount = (totalInstructions + MAX_ITEMS_PER_SHULKER - 1) / MAX_ITEMS_PER_SHULKER;
-    
+
     for (int shulkerIndex = 0; shulkerIndex < shulkerCount; ++shulkerIndex) {
         int startIdx = shulkerIndex * MAX_ITEMS_PER_SHULKER;
         int endIdx = std::min(startIdx + MAX_ITEMS_PER_SHULKER, totalInstructions);
-        
+
         std::string shulkerName = "Program";
         if (shulkerCount > 1) {
             shulkerName += "_Part_" + std::to_string(shulkerIndex + 1);
         }
-        
-        file << "/give @p shulker_box{display:{Name:'{\"text\":\"" << shulkerName << "\"}'},BlockEntityTag:{Items:[";
-        
+
+        file << "/give @p shulker_box[custom_name='{\"text\":\"" << shulkerName << "\"}',container=[";
+
+        bool first = true;
         for (int i = startIdx; i < endIdx; ++i) {
             auto it = opcodeTable.find(discInstructions[i]);
             if (it != opcodeTable.end()) {
-                if (i > startIdx) file << ",";
-                file << "{Slot:" << (i - startIdx) << "b,id:\"minecraft:music_disc_" << it->second << "\",Count:1b}";
+                if (!first) file << ",";
+                first = false;
+                file << "{slot:" << (i - startIdx)
+                     << ",item:{id:\"music_disc_" << it->second << "\",count:1}}";
             }
         }
-        
-        file << "]}}" << std::endl;
+
+        file << "]] 1" << std::endl;
     }
-    
+
     file.close();
 }
 

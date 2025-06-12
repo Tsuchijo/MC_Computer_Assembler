@@ -9,19 +9,19 @@
 Assembler::Assembler(const std::string& inputFile) {
     // Initialize the opcode table
     opcodeTable = {
-        {"XOR", "13"},
-        {"JMP", "cat"},
-        {"AND", "blocks"},
+        {"NOT", "13"},
+        {"SKZ", "cat"},
+        {"OR", "blocks"},
         {"LD", "chirp"},
-        {"OR", "far"},
+        {"XOR", "far"},
         {"OUT", "mall"},
-        {"NOT", "mellohi"},
+        {"AND", "mellohi"},
         {"DA1", "stal"},
-        {"DA2", "strad"},
+        {"DA2", "strd"},
         {"DA3", "ward"},
         {"DA4", "11"},
         {"DA5", "wait"},
-        {"DA6", "Pigstep"},
+        {"DA6", "pigstep"},
         {"DA7", "otherside"},
         {"DA8", "5"}
     };
@@ -40,19 +40,19 @@ Assembler::Assembler(const std::string& inputFile) {
 Assembler::Assembler() {
     // Initialize the opcode table
     opcodeTable = {
-        {"XOR", "13"},
-        {"JMP", "cat"},
-        {"AND", "blocks"},
+        {"NOT", "13"},
+        {"SKZ", "cat"},
+        {"OR", "blocks"},
         {"LD", "chirp"},
-        {"OR", "far"},
+        {"XOR", "far"},
         {"OUT", "mall"},
-        {"NOT", "mellohi"},
+        {"AND", "mellohi"},
         {"DA1", "stal"},
-        {"DA2", "strad"},
+        {"DA2", "strd"},
         {"DA3", "ward"},
         {"DA4", "11"},
         {"DA5", "wait"},
-        {"DA6", "Pigstep"},
+        {"DA6", "pigstep"},
         {"DA7", "otherside"},
         {"DA8", "5"}
     };
@@ -136,6 +136,20 @@ void Assembler::assemble(){
         } else {
             std::cerr << "Error: Invalid opcode or macro invocation: " << line << std::endl;
         }
+    }
+    
+    // Enforce ISA constraint: program must be a multiple of 27 instructions
+    const int INSTRUCTION_MULTIPLE = 27;
+    
+    int currentSize = discInstructions.size();
+    int remainder = currentSize % INSTRUCTION_MULTIPLE;
+    
+    if (remainder != 0) {
+        int nopsNeeded = INSTRUCTION_MULTIPLE - remainder;
+        for (int i = 0; i < nopsNeeded; ++i) {
+            discInstructions.push_back("NOT");
+        }
+        std::cout << "Program padded from " << currentSize << " to " << (currentSize + nopsNeeded) << " instructions (" << nopsNeeded << " NOPs added)" << std::endl;
     }
 }
 

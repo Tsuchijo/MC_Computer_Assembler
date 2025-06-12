@@ -1,4 +1,4 @@
 ; Test file 
 XOR
 AND
-JMP
+SKZ

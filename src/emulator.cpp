@@ -12,8 +12,8 @@ Emulator::Emulator() {
 
 void Emulator::initializeOpcodeMap() {
     opcodeToNumber = {
-        {"XOR", 1}, {"JMP", 2}, {"AND", 3}, {"LD", 4},
-        {"OR", 5}, {"OUT", 6}, {"NOT", 7}, {"DA1", 8},
+        {"NOT", 1}, {"SKZ", 2}, {"OR", 3}, {"LD", 4},
+        {"XOR", 5}, {"OUT", 6}, {"AND", 7}, {"DA1", 8},
         {"DA2", 9}, {"DA3", 10}, {"DA4", 11}, {"DA5", 12},
         {"DA6", 13}, {"DA7", 14}, {"DA8", 15}
     };
@@ -45,23 +45,46 @@ void Emulator::reset() {
     programCounter = 0;
     outputFlag = false;
     halted = false;
+    skipNext = false;
+    tapeMode = false;
     
     for (int i = 0; i < 8; ++i) {
         dataLines[i].input = false;
         dataLines[i].output = false;
+        dataLines[i].memoryValue = false;
     }
+    
+    tape1.tape.clear();
+    tape1.headPosition = 0;
+    tape2.tape.clear();
+    tape2.headPosition = 0;
 }
 
 bool Emulator::step() {
     if (halted || programCounter >= static_cast<int>(instructions.size())) {
-        halted = true;
-        return false;
+        // Check HALT flag (DA1) before declaring halt
+        if (programCounter >= static_cast<int>(instructions.size()) && dataLines[0].memoryValue) {
+            halted = true;
+            return false;
+        }
+        // Loop back to start if no halt flag
+        if (programCounter >= static_cast<int>(instructions.size())) {
+            programCounter = 0;
+        }
     }
     
     std::string instruction = instructions[programCounter];
     std::cout << "PC:" << std::setw(3) << programCounter 
               << " | " << std::setw(8) << instruction 
               << " | ";
+    
+    // Check if we should skip this instruction
+    if (skipNext) {
+        skipNext = false;
+        programCounter++;
+        std::cout << "SKIPPED | REG:" << (registerValue ? 1 : 0) << std::endl;
+        return true;
+    }
     
     bool continueExecution = executeInstruction(instruction);
     
@@ -250,13 +273,13 @@ bool Emulator::executeInstruction(const std::string& instruction) {
     int opcode = it->second;
     
     switch (opcode) {
-        case 1: executeXOR(); break;
-        case 2: executeJMP(); break;
-        case 3: executeAND(); break;
+        case 1: executeNOT(); break;
+        case 2: executeSKZ(); break;
+        case 3: executeOR(); break;
         case 4: executeLD(); break;
-        case 5: executeOR(); break;
+        case 5: executeXOR(); break;
         case 6: executeOUT(); break;
-        case 7: executeNOT(); break;
+        case 7: executeAND(); break;
         case 8: case 9: case 10: case 11: case 12: case 13: case 14: case 15:
             executeDataSelect(opcode - 8); break;
         default:
@@ -268,21 +291,26 @@ bool Emulator::executeInstruction(const std::string& instruction) {
 }
 
 void Emulator::updateOutput() {
-    dataLines[selectedDataLine].output = registerValue;
+    if (tapeMode) {
+        handleTapeOperation(selectedDataLine);
+    } else {
+        // Normal memory operation for DA1/DA2, output for others
+        if (selectedDataLine < 2) {
+            writeMemoryCell(selectedDataLine, registerValue);
+        } else {
+            dataLines[selectedDataLine].output = registerValue;
+        }
+    }
 }
 
 void Emulator::executeXOR() {
     registerValue = registerValue ^ dataLines[selectedDataLine].input;
 }
 
-void Emulator::executeJMP() {
-    if (programCounter < 2) {
-        std::cerr << "Warning: JUMP instruction at position " << programCounter 
-                  << " is less than 2 instructions from start. This may not work on the actual hardware." << std::endl;
-    }
-    
-    if (registerValue == false) {
-        programCounter = -1;  // Will be incremented to 0 at end of step()
+void Emulator::executeSKZ() {
+    // Skip next instruction if SKIP flag (DA2 memory) is high
+    if (dataLines[1].memoryValue) {
+        skipNext = true;
     }
 }
 
@@ -291,7 +319,16 @@ void Emulator::executeAND() {
 }
 
 void Emulator::executeLD() {
-    registerValue = dataLines[selectedDataLine].input;
+    if (tapeMode) {
+        handleTapeOperation(selectedDataLine);
+    } else {
+        // Normal memory operation for DA1/DA2, input for others
+        if (selectedDataLine < 2) {
+            registerValue = readMemoryCell(selectedDataLine);
+        } else {
+            registerValue = dataLines[selectedDataLine].input;
+        }
+    }
 }
 
 void Emulator::executeOR() {
@@ -312,4 +349,54 @@ void Emulator::executeDataSelect(int dataLineIndex) {
 
 std::string Emulator::getInstructionName(const std::string& instruction) const {
     return instruction;
+}
+
+bool Emulator::readMemoryCell(int dataLineIndex) {
+    if (dataLineIndex < 2) {
+        return dataLines[dataLineIndex].memoryValue;
+    }
+    return dataLines[dataLineIndex].input;
+}
+
+void Emulator::writeMemoryCell(int dataLineIndex, bool value) {
+    if (dataLineIndex < 2) {
+        dataLines[dataLineIndex].memoryValue = value;
+    } else {
+        dataLines[dataLineIndex].output = value;
+    }
+}
+
+void Emulator::handleTapeOperation(int dataLineIndex) {
+    if (!tapeMode) return;
+    
+    // Tape 1: DA3 (left), DA4 (read/write), DA5 (right)
+    // Tape 2: DA6 (left), DA7 (read/write), DA8 (right)
+    
+    if (dataLineIndex >= 2 && dataLineIndex <= 4) {
+        // Tape 1 operations
+        if (dataLineIndex == 2) { // DA3 - move left
+            tape1.moveLeft();
+        } else if (dataLineIndex == 3) { // DA4 - read/write
+            if (outputFlag) {
+                tape1.write(registerValue);
+            } else {
+                registerValue = tape1.read();
+            }
+        } else if (dataLineIndex == 4) { // DA5 - move right
+            tape1.moveRight();
+        }
+    } else if (dataLineIndex >= 5 && dataLineIndex <= 7) {
+        // Tape 2 operations
+        if (dataLineIndex == 5) { // DA6 - move left
+            tape2.moveLeft();
+        } else if (dataLineIndex == 6) { // DA7 - read/write
+            if (outputFlag) {
+                tape2.write(registerValue);
+            } else {
+                registerValue = tape2.read();
+            }
+        } else if (dataLineIndex == 7) { // DA8 - move right
+            tape2.moveRight();
+        }
+    }
 }

@@ -27,7 +27,6 @@ Makefile
 *.exe
 *.out
 assembler
-tests
 
 # IDE files
 .vscode/

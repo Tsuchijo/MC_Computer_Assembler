@@ -31,7 +31,7 @@ class Assembler {
     private:
         void parseMacroDefinition(std::vector<std::string>::iterator& currentLine, 
                                   const std::vector<std::string>::iterator& end);
-        void parseMacroInvocation(const std::string& line, std::vector<std::string>& instructions);
+        void parseMacroInvocation(const std::string& line, std::vector<std::string>& instructions, bool insertSKZ = false);
 
         // Struct definition goes inside the class if it's only used by this class
         struct MacroDefinition {

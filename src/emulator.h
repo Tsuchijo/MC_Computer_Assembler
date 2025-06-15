@@ -25,7 +25,7 @@ public:
     bool getDataOutput(int dataLine) const;
     void enableTapeMode(bool enable) { tapeMode = enable; }
     
-    bool isRunning() const { return programCounter < instructions.size() && !halted; }
+    bool isRunning() const { return !halted; }
     bool isHalted() const { return halted; }
     int getCurrentPC() const { return programCounter; }
     bool getRegisterValue() const { return registerValue; }
@@ -87,8 +87,9 @@ private:
     // Memory and tape operations
     bool readMemoryCell(int dataLineIndex);
     void writeMemoryCell(int dataLineIndex, bool value);
-    void handleTapeOperation(int dataLineIndex);
+    void handleTapeOperation(int dataLineIndex, bool isWrite = false);
     
     std::string getInstructionName(const std::string& instruction) const;
     void printDataLines() const;
+    void printTapeState() const;
 };

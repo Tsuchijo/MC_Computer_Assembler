@@ -1,4 +1,4 @@
-; Basic Test Code, Wait for input on Data 8 then execute 2 bit addition
+; Basic Test Code for V2 - Skip demonstration and basic operations
 
 def abc(a,b,c)
     a
@@ -7,12 +7,14 @@ def abc(a,b,c)
 end
 
 def unused()
-    JMP
+    SKZ
 end
 
 DA8
 LD 
-JMP
+DA2        ; Select SKIP flag
+LD         ; Load SKIP flag value
+SKZ        ; Skip next if SKIP flag is HIGH
 DA3
 LD
 DA1
@@ -25,4 +27,4 @@ XOR
 DA2
 XOR 
 OUT 
-abc(JMP, JMP, JMP)
+abc(SKZ, SKZ, SKZ)

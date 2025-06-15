@@ -1,0 +1,9 @@
+DA4
+LD
+XOR 
+NOT 
+OUT 
+LD 
+XOR 
+NOT
+OUT 

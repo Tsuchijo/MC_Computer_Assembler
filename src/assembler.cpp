@@ -108,10 +108,20 @@ void Assembler::assemble(){
     while(containsMacroInvocation && nestedMacroDepth < MAX_NESTED_MACRO_DEPTH) {
         std::vector<std::string> instructions;
         containsMacroInvocation = false;
-        for (const auto& line : assemblyFile) {
+        
+        for (size_t i = 0; i < assemblyFile.size(); ++i) {
+            const std::string& line = assemblyFile[i];
+            
+            // Check for SKZ followed by macro invocation pattern
+            if (line == "SKZ" && i + 1 < assemblyFile.size() && isValidMacroInvocation(assemblyFile[i + 1])) {
+                // Skip the SKZ line and process the macro with SKZ insertion
+                ++i; // Move to the macro line
+                parseMacroInvocation(assemblyFile[i], instructions, true);
+                containsMacroInvocation = true;
+            }
             // Check if the line is a macro invocation
-            if (isValidMacroInvocation(line)) {
-                parseMacroInvocation(line, instructions);
+            else if (isValidMacroInvocation(line)) {
+                parseMacroInvocation(line, instructions, false);
                 containsMacroInvocation = true;
             } else {
                 // Check if the line is a valid opcode
@@ -355,7 +365,7 @@ void Assembler::findParameters(const std::string& line, std::vector<std::string>
     }
 }
 
-void Assembler::parseMacroInvocation(const std::string& line, std::vector<std::string>& instructions) {
+void Assembler::parseMacroInvocation(const std::string& line, std::vector<std::string>& instructions, bool insertSKZ) {
     // Implementation for parsing macro invocations
     std::string macroName = line.substr(0, line.find('('));
     auto it = macroTable.find(macroName);
@@ -382,7 +392,8 @@ void Assembler::parseMacroInvocation(const std::string& line, std::vector<std::s
         }
 
         // Replace parameters in the macro body with arguments
-        for(auto& bodyLine : macro.body) {
+        std::vector<std::string> expandedBody = macro.body; // Work with a copy
+        for(auto& bodyLine : expandedBody) {
             // For each line, if is not a macro call just check and replace if it is a parameter alone
             if (!isValidMacroInvocation(bodyLine) && !isValidOpcode(bodyLine)) {
                 for (size_t i = 0; i < macro.parameters.size(); ++i) {
@@ -415,9 +426,16 @@ void Assembler::parseMacroInvocation(const std::string& line, std::vector<std::s
         }
 
         // Add the expanded macro body to the instructions
-        for (const auto& bodyLine : macro.body) {
+        for (size_t i = 0; i < expandedBody.size(); ++i) {
+            const auto& bodyLine = expandedBody[i];
             std::cout << "Adding line to instructions: " << bodyLine << std::endl;
             instructions.push_back(bodyLine);
+            
+            // Insert SKZ between lines if requested (but not after the last line)
+            if (insertSKZ && i < expandedBody.size() - 1) {
+                std::cout << "Adding SKZ between macro lines" << std::endl;
+                instructions.push_back("SKZ");
+            }
         }
     } else {
         std::cerr << "Unknown macro: " << macroName << std::endl;

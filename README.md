@@ -12,17 +12,20 @@ Each instruction is encoded by a music disc, with instructions 1-12 being farmab
 
 The computer operates with a register-based architecture featuring:
 - **Single Register**: All operations use a central 1-bit register for computation
-- **8 Data Lines**: Each data line (DA1-DA8) has associated INPUT and OUTPUT lines (1-bit each)
-- **OUTPUT Flag**: Controls when register values are output to data lines
-- **Program Counter**: Managed by JUMP instructions for program flow control
+- **8 Data Lines**: Each data line (DA1-DA8) can function as memory or I/O depending on configuration
+- **HALT Flag**: Program control flag that prevents looping when set
+- **SKIP Flag**: Instruction control flag that causes SKZ to skip the next instruction
+- **Dual Tape Memory**: Two infinite tape memories with read/write heads for Turing completeness
+- **Program Counter**: Controls program flow with conditional skipping
 
-All instructions execute within the same time frame unless otherwise specified. The JUMP instruction has variable timing depending on its distance from the program start (minimum 2 instructions).
+Instructions execute at 12 game ticks per cycle with a master clock. The instruction memory uses shulker boxes filled with music discs read by jukeboxes.
 
 ## Features
 
 ### Assembler Features
 - **Macro Support**: Define and use macros with parameters for code reuse
 - **Recursive Macros**: Support for nested macro calls with proper parameter substitution
+- **SKZ Macro Expansion**: Special expansion when SKZ precedes a macro call - inserts SKZ between each line of the macro
 - **Multiple Output Formats**: Generate numeric lists or Minecraft give commands
 - **Custom Output Files**: Specify output filename and format
 - **Auto-splitting**: Programs with more than 27 instructions are automatically split into multiple numbered shulker boxes
@@ -38,31 +41,46 @@ All instructions execute within the same time frame unless otherwise specified. 
 
 ## Instruction Set
 
-| Number | Op Code | Instruction | Music Disc | Function |
-|--------|---------|-------------|------------|----------|
-| 1 | 0001 | XOR | 13 | Applies XOR gate to register and data, saves to register |
-| 2 | 0010 | JMP | cat | Jumps back to start if register is empty (must be ≥2 instructions from start) |
-| 3 | 0011 | AND | blocks | Applies AND gate to register and data, saves to register |
-| 4 | 0100 | LD | chirp | Loads data into register |
-| 5 | 0101 | OR | far | Applies OR gate to register and data, saves to register |
-| 6 | 0110 | OUT | mall | Pulses OUTPUT flag |
-| 7 | 0111 | NOT | mellohi | Applies NOT gate to register value, saves to register |
-| 8 | 1000 | DA1 | stal | Selects Data Line 1 |
-| 9 | 1001 | DA2 | strad | Selects Data Line 2 |
-| 10 | 1010 | DA3 | ward | Selects Data Line 3 |
-| 11 | 1011 | DA4 | 11 | Selects Data Line 4 |
-| 12 | 1100 | DA5 | wait | Selects Data Line 5 |
-| 13 | 1101 | DA6 | Pigstep | Selects Data Line 6 |
-| 14 | 1110 | DA7 | otherside | Selects Data Line 7 |
-| 15 | 1111 | DA8 | 5 | Selects Data Line 8 |
+| Number | Instruction | Music Disc | Function |
+|--------|-------------|------------|----------|
+| 1 | NOT | 13 | reg ← NOT(reg) |
+| 2 | SKZ | cat | Skip next instruction if SKIP flag is HIGH |
+| 3 | OR | blocks | reg ← OR(reg, input) |
+| 4 | LD | chirp | reg ← input |
+| 5 | XOR | far | reg ← XOR(reg, input) |
+| 6 | OUT | mall | output ← reg |
+| 7 | AND | mellohi | reg ← AND(reg, input) |
+| 8 | DA1 | stal | Select Data Line 1 (HALT Flag in TC mode) |
+| 9 | DA2 | strad | Select Data Line 2 (SKIP Flag in TC mode) |
+| 10 | DA3 | ward | Select Data Line 3 (Tape #1 Left Shift in TC mode) |
+| 11 | DA4 | 11 | Select Data Line 4 (Tape #1 Read/Write in TC mode) |
+| 12 | DA5 | wait | Select Data Line 5 (Tape #1 Right Shift in TC mode) |
+| 13 | DA6 | pigstep | Select Data Line 6 (Tape #2 Left Shift in TC mode) |
+| 14 | DA7 | otherside | Select Data Line 7 (Tape #2 Read/Write in TC mode) |
+| 15 | DA8 | 5 | Select Data Line 8 (Tape #2 Right Shift in TC mode) |
 
 ### Instruction Details
 
-- **XOR, AND, OR, LD**: Use the INPUT line of the selected data line
-- **OUT**: Outputs register value to the OUTPUT line when OUTPUT flag is true
-- **JMP**: Variable timing based on distance from program start; must be at least 2 instructions from start
-- **DATA Lines**: Each has associated INPUT and OUTPUT lines for bidirectional communication
+- **Logic Operations (OR, XOR, AND, LD)**: Use the input value of the selected data line
+- **OUT**: Outputs register value to the selected data line output
+- **SKZ**: Conditional skip - skips next instruction if SKIP flag (DA2) is HIGH
+- **Data Lines**: Can function as memory cells or I/O depending on configuration
 - **All values are 1-bit**: Register and data line values are boolean (0 or 1)
+
+### Turing Complete Memory Configuration
+
+In Turing Complete mode, the data lines have specialized functions:
+
+| Data Line | Name | Functionality |
+|-----------|------|---------------|
+| DA1 | HALT Flag | Read/write memory cell. If HIGH when program ends, HALT instead of loop |
+| DA2 | SKIP Flag | Read/write memory cell. If HIGH when SKZ executes, skip next instruction |
+| DA3 | Tape #1 Left | OUT shifts tape #1 read/write head left if register value is 1 |
+| DA4 | Tape #1 R/W | LD reads tape #1 value, OUT toggles tape #1 value |
+| DA5 | Tape #1 Right | OUT shifts tape #1 read/write head right if register value is 1 |
+| DA6 | Tape #2 Left | OUT shifts tape #2 read/write head left if register value is 1 |
+| DA7 | Tape #2 R/W | LD reads tape #2 value, OUT toggles tape #2 value |
+| DA8 | Tape #2 Right | OUT shifts tape #2 read/write head right if register value is 1 |
 
 ## Building
 
@@ -90,7 +108,8 @@ cmake --build build
 
 **Options:**
 - `-e, --emulate` - Run in emulator mode
-- `-i, --interactive` - Run in interactive emulator mode  
+- `-i, --interactive` - Run in interactive emulator mode
+- `-t, --turing` - Enable Turing Complete mode (with tape memory)
 - `-o, --output <file>` - Specify output file (default: output.txt)
 - `-m, --minecraft` - Output as Minecraft commands (default: numeric)
 - `-h, --help` - Show help message
@@ -115,6 +134,12 @@ cmake --build build
 
 # Interactive debugging mode
 ./build/assembler -i program.asm
+
+# Run in Turing Complete mode with tape memory
+./build/assembler -e -t program.asm
+
+# Interactive mode with Turing Complete features
+./build/assembler -i -t program.asm
 ```
 
 ## Interactive Emulator Mode
@@ -124,10 +149,11 @@ The interactive mode provides a powerful debugging environment:
 ### Commands
 - **Enter/step** - Execute next instruction
 - **q/quit** - Quit emulator
-- **r/run** - Run until completion
-- **s/state** - Show current state
+- **r/run** - Run until completion or halt
+- **s/state** - Show current state including flags and tape positions
 - **p/program** - Show program with program counter
 - **set DAx 0/1** - Set data line x input to 0 or 1
+- **tape** - Enable/disable Turing Complete tape mode
 - **h/help** - Show command help
 
 ### Example Interactive Session
@@ -145,11 +171,14 @@ Interactive mode commands:
 Program Counter: 0
 Register: 0
 Selected Data Line: DA1
-Output Flag: false
+HALT Flag: false
+SKIP Flag: false
 Halted: false
 Data Lines:
-  DA1: IN=0 OUT=0 [SELECTED]
-  DA2: IN=0 OUT=0
+  DA1: IN=0 OUT=0 [HALT Flag] [SELECTED]
+  DA2: IN=0 OUT=0 [SKIP Flag]
+  DA3: Tape #1 Left Shift
+  DA4: Tape #1 R/W (Head: 0, Value: 0)
   ...
 
 >>> set DA1 1
@@ -185,6 +214,39 @@ add_two(DA1, DA2)
 OUT          ; Output the result
 ```
 
+### SKZ Macro Expansion
+
+When `SKZ` immediately precedes a macro call, the assembler performs special expansion by inserting `SKZ` between each line of the macro. This creates a conditional execution pattern where each instruction in the macro is only executed if the previous instruction didn't cause a skip.
+
+**Example:**
+```assembly
+def test_macro(data_line)
+    data_line
+    LD
+    NOT
+    OUT
+end
+
+; Normal macro expansion:
+test_macro(DA1)
+; Expands to: DA1, LD, NOT, OUT
+
+; SKZ macro expansion:
+SKZ test_macro(DA1)
+; Expands to: DA1, SKZ, LD, SKZ, NOT, SKZ, OUT
+```
+
+**Use Cases:**
+- **Conditional execution of entire macro**: If the first skip condition fails, all subsequent instructions are skipped
+- **Early exit patterns**: Allow macros to exit early based on conditions
+- **Complex conditional logic**: Create sophisticated branching behavior within macros
+
+**Important Notes:**
+- SKZ is inserted between each line but NOT after the last line
+- The pattern only applies when SKZ directly precedes a macro call on the next line
+- Regular SKZ behavior is preserved for non-macro instructions
+```
+
 ### Program Examples
 
 #### Simple XOR Gate
@@ -198,16 +260,25 @@ DA3          ; Select output line
 OUT          ; Output result
 ```
 
-#### Loop Example
+#### Conditional Skip Example
 ```assembly
-; Loop until DA1 input is 0
-DA1          ; Select DA1
-LD           ; Load value
-JMP          ; Jump to start if register is 0
-DA2          ; Select DA2
-LD           ; Load from DA2
-DA3          ; Select DA3  
-OUT          ; Output to DA3
+; Skip next instruction if SKIP flag is set
+DA2          ; Select SKIP flag
+LD           ; Load SKIP flag value
+SKZ          ; Skip next instruction if flag is HIGH
+DA1          ; This instruction is skipped if SKIP was HIGH
+LD           ; Load from DA1
+DA3          ; Select output
+OUT          ; Output result
+```
+
+#### Turing Complete Tape Operation
+```assembly
+; Write a value to tape #1 and move right
+DA4          ; Select Tape #1 Read/Write
+OUT          ; Toggle tape value at current position
+DA5          ; Select Tape #1 Right Shift  
+OUT          ; Move tape head right
 ```
 
 ## Output Formats
@@ -232,6 +303,17 @@ For programs with more than 27 instructions, multiple shulker boxes are created:
 - `Program_Part_1` (instructions 1-27)
 - `Program_Part_2` (instructions 28-54)
 - etc.
+
+## Memory Limitations
+
+Due to the limitations of the memory design, programs must be assembled with the following guarantees:
+
+- **Program Length**: Must be a multiple of 27 instructions
+- **Minimum Size**: Must have at least 5 shulker boxes (135 instructions minimum)
+- **HALT Flag Timing**: Should not be written less than 2 instructions from program end
+- **SKIP Flag Timing**: SKZ cannot be called directly after the SKIP flag has been written to
+
+These limitations ensure proper operation within the Minecraft redstone computer's timing constraints.
 
 ## Testing
 

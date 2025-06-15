@@ -11,6 +11,7 @@ void printUsage(const char* programName) {
     std::cout << "Options:" << std::endl;
     std::cout << "  -e, --emulate         Run in emulator mode" << std::endl;
     std::cout << "  -i, --interactive     Run in interactive emulator mode" << std::endl;
+    std::cout << "  -t, --turing          Enable Turing Complete mode (with tape memory)" << std::endl;
     std::cout << "  -o, --output <file>   Specify output file (default: output.txt)" << std::endl;
     std::cout << "  -m, --minecraft       Output as minecraft commands (default: numeric)" << std::endl;
     std::cout << "  -h, --help            Show this help message" << std::endl;
@@ -29,6 +30,7 @@ int main(int argc, char* argv[]) {
     bool emulatorMode = false;
     bool interactiveMode = false;
     bool minecraftFormat = false;
+    bool turingMode = false;
 
     // Parse command line arguments
     for (int i = 1; i < argc; ++i) {
@@ -38,6 +40,8 @@ int main(int argc, char* argv[]) {
         } else if (arg == "-i" || arg == "--interactive") {
             emulatorMode = true;
             interactiveMode = true;
+        } else if (arg == "-t" || arg == "--turing") {
+            turingMode = true;
         } else if (arg == "-o" || arg == "--output") {
             if (i + 1 < argc) {
                 outputFile = argv[++i];
@@ -80,6 +84,12 @@ int main(int argc, char* argv[]) {
         if (!emulator.loadProgram(inputFile)) {
             std::cerr << "Failed to load program for emulation." << std::endl;
             return 1;
+        }
+
+        // Enable Turing Complete mode if requested
+        if (turingMode) {
+            emulator.enableTapeMode(true);
+            std::cout << "Turing Complete mode enabled - data lines function as memory and tape operations." << std::endl;
         }
 
         if (interactiveMode) {

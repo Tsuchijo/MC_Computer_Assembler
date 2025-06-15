@@ -155,6 +155,7 @@ void Emulator::runInteractive() {
             std::cout << std::endl;
             while (step()) {
                 // Continue execution
+                printTapeState();
             }
             break;
         } else if (input == "s" || input == "state") {
@@ -219,19 +220,58 @@ void Emulator::printState() const {
     std::cout << "Selected Data Line: DA" << (selectedDataLine + 1) << std::endl;
     std::cout << "Output Flag: " << (outputFlag ? "true" : "false") << std::endl;
     std::cout << "Halted: " << (halted ? "true" : "false") << std::endl;
+    std::cout << "Tape Mode: " << (tapeMode ? "enabled" : "disabled") << std::endl;
     printDataLines();
+    if (tapeMode) {
+        printTapeState();
+    }
 }
 
 void Emulator::printDataLines() const {
     std::cout << "Data Lines:" << std::endl;
     for (int i = 0; i < 8; ++i) {
-        std::cout << "  DA" << (i + 1) << ": IN=" << (dataLines[i].input ? 1 : 0)
-                  << " OUT=" << (dataLines[i].output ? 1 : 0);
+        std::cout << "  DA" << (i + 1);
+        // Show memory value for DA1 and DA2
+        if (i < 2) {
+            std::cout << " MEM=" << (dataLines[i].memoryValue ? 1 : 0);
+        }
+        else {
+            std::cout << " IN=" << (dataLines[i].input ? 1 : 0)
+                      << " OUT=" << (dataLines[i].output ? 1 : 0);
+        }
         if (i == selectedDataLine) {
             std::cout << " [SELECTED]";
         }
         std::cout << std::endl;
     }
+}
+
+void Emulator::printTapeState() const {
+    std::cout << "Tape State:" << std::endl;
+    
+    // Print Tape 1 state
+    std::cout << "  Tape 1 (DA3-DA5): ";
+    for (int i = tape1.headPosition - 3; i <= tape1.headPosition + 3; ++i) {
+        if (i == tape1.headPosition) {
+            std::cout << "[" << (tape1.tape.count(i) ? (tape1.tape.at(i) ? 1 : 0) : 0) << "]";
+        } else {
+            std::cout << (tape1.tape.count(i) ? (tape1.tape.at(i) ? 1 : 0) : 0);
+        }
+        if (i < tape1.headPosition + 3) std::cout << " ";
+    }
+    std::cout << " (Head at " << tape1.headPosition << ")" << std::endl;
+    
+    // Print Tape 2 state  
+    std::cout << "  Tape 2 (DA6-DA8): ";
+    for (int i = tape2.headPosition - 3; i <= tape2.headPosition + 3; ++i) {
+        if (i == tape2.headPosition) {
+            std::cout << "[" << (tape2.tape.count(i) ? (tape2.tape.at(i) ? 1 : 0) : 0) << "]";
+        } else {
+            std::cout << (tape2.tape.count(i) ? (tape2.tape.at(i) ? 1 : 0) : 0);
+        }
+        if (i < tape2.headPosition + 3) std::cout << " ";
+    }
+    std::cout << " (Head at " << tape2.headPosition << ")" << std::endl;
 }
 
 void Emulator::printProgram() const {
@@ -251,7 +291,7 @@ void Emulator::clearScreen() const {
 }
 
 void Emulator::setDataInput(int dataLine, bool value) {
-    if (dataLine >= 0 && dataLine < 8) {
+    if (dataLine >= 2 && dataLine < 8) {
         dataLines[dataLine].input = value;
     }
 }
@@ -291,8 +331,8 @@ bool Emulator::executeInstruction(const std::string& instruction) {
 }
 
 void Emulator::updateOutput() {
-    if (tapeMode) {
-        handleTapeOperation(selectedDataLine);
+    if (tapeMode && (selectedDataLine >= 2 && selectedDataLine <= 7)) {
+        handleTapeOperation(selectedDataLine, true);
     } else {
         // Normal memory operation for DA1/DA2, output for others
         if (selectedDataLine < 2) {
@@ -304,7 +344,36 @@ void Emulator::updateOutput() {
 }
 
 void Emulator::executeXOR() {
-    registerValue = registerValue ^ dataLines[selectedDataLine].input;
+    bool valueToXOR;
+    if (tapeMode && (selectedDataLine >= 2 && selectedDataLine <= 7)) {
+        // For tape operations, we need to read the current tape value
+        if (selectedDataLine >= 2 && selectedDataLine <= 4) {
+            // Tape 1 - DA4 is the read/write head
+            if (selectedDataLine == 3) {
+                valueToXOR = tape1.read();
+            } else {
+                valueToXOR = dataLines[selectedDataLine].input;
+            }
+        } else if (selectedDataLine >= 5 && selectedDataLine <= 7) {
+            // Tape 2 - DA7 is the read/write head  
+            if (selectedDataLine == 6) {
+                valueToXOR = tape2.read();
+            } else {
+                valueToXOR = dataLines[selectedDataLine].input;
+            }
+        } else {
+            valueToXOR = dataLines[selectedDataLine].input;
+        }
+    } else {
+        // Normal operation - use input line or memory
+        if (selectedDataLine < 2) {
+            valueToXOR = readMemoryCell(selectedDataLine);
+        } else {
+            valueToXOR = dataLines[selectedDataLine].input;
+        }
+    }
+    
+    registerValue = registerValue ^ valueToXOR;
 }
 
 void Emulator::executeSKZ() {
@@ -315,12 +384,41 @@ void Emulator::executeSKZ() {
 }
 
 void Emulator::executeAND() {
-    registerValue = registerValue & dataLines[selectedDataLine].input;
+    bool valueToAND;
+    if (tapeMode && (selectedDataLine >= 2 && selectedDataLine <= 7)) {
+        // For tape operations, we need to read the current tape value
+        if (selectedDataLine >= 2 && selectedDataLine <= 4) {
+            // Tape 1 - DA4 is the read/write head
+            if (selectedDataLine == 3) {
+                valueToAND = tape1.read();
+            } else {
+                valueToAND = dataLines[selectedDataLine].input;
+            }
+        } else if (selectedDataLine >= 5 && selectedDataLine <= 7) {
+            // Tape 2 - DA7 is the read/write head  
+            if (selectedDataLine == 6) {
+                valueToAND = tape2.read();
+            } else {
+                valueToAND = dataLines[selectedDataLine].input;
+            }
+        } else {
+            valueToAND = dataLines[selectedDataLine].input;
+        }
+    } else {
+        // Normal operation - use input line or memory
+        if (selectedDataLine < 2) {
+            valueToAND = readMemoryCell(selectedDataLine);
+        } else {
+            valueToAND = dataLines[selectedDataLine].input;
+        }
+    }
+    
+    registerValue = registerValue & valueToAND;
 }
 
 void Emulator::executeLD() {
-    if (tapeMode) {
-        handleTapeOperation(selectedDataLine);
+    if (tapeMode && (selectedDataLine >= 2 && selectedDataLine <= 7)) {
+        handleTapeOperation(selectedDataLine, false);
     } else {
         // Normal memory operation for DA1/DA2, input for others
         if (selectedDataLine < 2) {
@@ -332,7 +430,36 @@ void Emulator::executeLD() {
 }
 
 void Emulator::executeOR() {
-    registerValue = registerValue | dataLines[selectedDataLine].input;
+    bool valueToOR;
+    if (tapeMode && (selectedDataLine >= 2 && selectedDataLine <= 7)) {
+        // For tape operations, we need to read the current tape value
+        if (selectedDataLine >= 2 && selectedDataLine <= 4) {
+            // Tape 1 - DA4 is the read/write head
+            if (selectedDataLine == 3) {
+                valueToOR = tape1.read();
+            } else {
+                valueToOR = dataLines[selectedDataLine].input;
+            }
+        } else if (selectedDataLine >= 5 && selectedDataLine <= 7) {
+            // Tape 2 - DA7 is the read/write head  
+            if (selectedDataLine == 6) {
+                valueToOR = tape2.read();
+            } else {
+                valueToOR = dataLines[selectedDataLine].input;
+            }
+        } else {
+            valueToOR = dataLines[selectedDataLine].input;
+        }
+    } else {
+        // Normal operation - use input line or memory
+        if (selectedDataLine < 2) {
+            valueToOR = readMemoryCell(selectedDataLine);
+        } else {
+            valueToOR = dataLines[selectedDataLine].input;
+        }
+    }
+    
+    registerValue = registerValue | valueToOR;
 }
 
 void Emulator::executeOUT() {
@@ -340,7 +467,7 @@ void Emulator::executeOUT() {
 }
 
 void Emulator::executeNOT() {
-    registerValue = ~registerValue;
+    registerValue = !registerValue;
 }
 
 void Emulator::executeDataSelect(int dataLineIndex) {
@@ -366,7 +493,7 @@ void Emulator::writeMemoryCell(int dataLineIndex, bool value) {
     }
 }
 
-void Emulator::handleTapeOperation(int dataLineIndex) {
+void Emulator::handleTapeOperation(int dataLineIndex, bool isWrite) {
     if (!tapeMode) return;
     
     // Tape 1: DA3 (left), DA4 (read/write), DA5 (right)
@@ -374,28 +501,28 @@ void Emulator::handleTapeOperation(int dataLineIndex) {
     
     if (dataLineIndex >= 2 && dataLineIndex <= 4) {
         // Tape 1 operations
-        if (dataLineIndex == 2) { // DA3 - move left
+        if (dataLineIndex == 2 && registerValue) { // DA3 - move left
             tape1.moveLeft();
         } else if (dataLineIndex == 3) { // DA4 - read/write
-            if (outputFlag) {
+            if (isWrite) {
                 tape1.write(registerValue);
             } else {
                 registerValue = tape1.read();
             }
-        } else if (dataLineIndex == 4) { // DA5 - move right
+        } else if (dataLineIndex == 4 && registerValue) { // DA5 - move right
             tape1.moveRight();
         }
     } else if (dataLineIndex >= 5 && dataLineIndex <= 7) {
         // Tape 2 operations
         if (dataLineIndex == 5) { // DA6 - move left
             tape2.moveLeft();
-        } else if (dataLineIndex == 6) { // DA7 - read/write
-            if (outputFlag) {
+        } else if (dataLineIndex == 6 && registerValue) { // DA7 - read/write
+            if (isWrite) {
                 tape2.write(registerValue);
             } else {
                 registerValue = tape2.read();
             }
-        } else if (dataLineIndex == 7) { // DA8 - move right
+        } else if (dataLineIndex == 7 && registerValue) { // DA8 - move right
             tape2.moveRight();
         }
     }

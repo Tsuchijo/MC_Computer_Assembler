@@ -10,4 +10,4 @@ def abcpermute(a,b,c)
     abc(c, a, b)
 end
 
-abcpermute(JMP, XOR, AND)
+abcpermute(SKZ, XOR, AND)

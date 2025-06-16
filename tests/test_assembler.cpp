@@ -121,9 +121,74 @@ TEST_CASE("V2 Macro Compatibility", "[assembler][v2][macro]") {
         REQUIRE(instructions.size() == 27);
         
         // The recursive macro should expand correctly - check that it has the right pattern
-        // Based on debug output, all the actual instructions are SKZ
+        // abcpermute(SKZ, XOR, AND) should expand to: SKZ, XOR, AND, XOR, AND, SKZ, AND, SKZ, XOR
         REQUIRE(instructions[0] == "SKZ");
-        REQUIRE(instructions[1] == "SKZ");
-        REQUIRE(instructions[2] == "SKZ");
+        REQUIRE(instructions[1] == "XOR");
+        REQUIRE(instructions[2] == "AND");
+        REQUIRE(instructions[3] == "XOR");
+        REQUIRE(instructions[4] == "AND");
+        REQUIRE(instructions[5] == "SKZ");
+        REQUIRE(instructions[6] == "AND");
+        REQUIRE(instructions[7] == "SKZ");
+        REQUIRE(instructions[8] == "XOR");
+    }
+}
+
+TEST_CASE("Recursive SKZ Macro Expansion", "[assembler][skz][macro]") {
+    
+    SECTION("SKZ interleaving applies to nested macro calls") {
+        // Test that SKZ followed by a macro call inserts SKZ between ALL instructions,
+        // including those from nested macro calls
+        std::string testFile = getTestFilePath("test_recursive_skz.asm");
+        
+        Assembler assembler(testFile);
+        auto instructions = assembler.getInstructions();
+        
+        // Should expand to 9 base instructions + padding to 27
+        // SKZ outer_macro() should expand to:
+        // DA2, SKZ, DA1, SKZ, LD, SKZ, OUT, SKZ, DA3 (5 original + 4 inserted SKZ = 9 total)
+        REQUIRE(instructions.size() == 27);
+        
+        REQUIRE(instructions[0] == "DA2");
+        REQUIRE(instructions[1] == "SKZ");  // Inserted between macro lines
+        REQUIRE(instructions[2] == "DA1");  // From inner_macro()
+        REQUIRE(instructions[3] == "SKZ");  // Inserted between macro lines
+        REQUIRE(instructions[4] == "LD");   // From inner_macro()
+        REQUIRE(instructions[5] == "SKZ");  // Inserted between macro lines
+        REQUIRE(instructions[6] == "OUT");  // From inner_macro()
+        REQUIRE(instructions[7] == "SKZ");  // Inserted between macro lines
+        REQUIRE(instructions[8] == "DA3");
+    }
+    
+    SECTION("Complex nested SKZ macro expansion") {
+        // Test more complex nested macro expansion with SKZ
+        std::string testFile = getTestFilePath("test_jump_to_skz.asm");
+        
+        Assembler assembler(testFile);
+        auto instructions = assembler.getInstructions();
+        
+        // Should expand to 25 base instructions + padding to 27
+        REQUIRE(instructions.size() == 27);
+        
+        // Verify that SKZ is inserted between all macro-expanded instructions
+        // The pattern should show SKZ interleaved throughout the expanded macro calls
+        REQUIRE(instructions[0] == "DA7");    // First instruction from set_cell_values
+        REQUIRE(instructions[1] == "SKZ");    // Inserted between macro lines
+        REQUIRE(instructions[2] == "LD");     // From HIGH() macro expansion
+        REQUIRE(instructions[3] == "SKZ");    // Inserted between macro lines
+        REQUIRE(instructions[4] == "XOR");    // From HIGH() macro expansion
+        REQUIRE(instructions[5] == "SKZ");    // Inserted between macro lines
+        REQUIRE(instructions[6] == "NOT");    // From HIGH() macro expansion
+        REQUIRE(instructions[7] == "SKZ");    // Inserted between macro lines
+        
+        // Verify that SKZ continues to be inserted throughout the expansion
+        bool hasProperSKZInterleaving = true;
+        for (int i = 1; i < 24; i += 2) {  // Check odd positions up to position 23
+            if (instructions[i] != "SKZ") {
+                hasProperSKZInterleaving = false;
+                break;
+            }
+        }
+        REQUIRE(hasProperSKZInterleaving);
     }
 }

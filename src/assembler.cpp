@@ -385,7 +385,8 @@ void Assembler::parseMacroInvocation(const std::string& line, std::vector<std::s
                 std::cerr << "Error: Not enough arguments for macro " << macroName << std::endl;
                 return;
             }
-            if (!isValidOpcode(arg) && !isValidMacroInvocation(arg)) {
+            // Allow opcodes, macro invocations, or macro names as arguments
+            if (!isValidOpcode(arg) && !isValidMacroInvocation(arg) && macroTable.find(arg) == macroTable.end()) {
                 std::cerr << "Error: Invalid argument for macro " << macroName << ": " << arg << std::endl;
                 return;
             }
@@ -394,30 +395,38 @@ void Assembler::parseMacroInvocation(const std::string& line, std::vector<std::s
         // Replace parameters in the macro body with arguments
         std::vector<std::string> expandedBody = macro.body; // Work with a copy
         for(auto& bodyLine : expandedBody) {
-            // For each line, if is not a macro call just check and replace if it is a parameter alone
-            if (!isValidMacroInvocation(bodyLine) && !isValidOpcode(bodyLine)) {
-                for (size_t i = 0; i < macro.parameters.size(); ++i) {
-                    std::string param = macro.parameters[i];
-                    std::string arg = arguments[i];
-                    size_t pos = bodyLine.find(param);
-                    if (pos != std::string::npos) {
-                        bodyLine.replace(pos, param.length(), arg);
-                    }
+            // For each line, replace parameters with arguments
+            for (size_t i = 0; i < macro.parameters.size(); ++i) {
+                std::string param = macro.parameters[i];
+                std::string arg = arguments[i];
+                
+                // Handle different cases:
+                // 1. Exact parameter match (e.g., "LEFT" -> "DA6")
+                if (bodyLine == param) {
+                    bodyLine = arg;
+                }
+                // 2. Parameter with () (e.g., "one_val()" -> "HIGH()")
+                else if (bodyLine == param + "()") {
+                    bodyLine = arg + "()";
                 }
             }
-            else if (isValidMacroInvocation(bodyLine)) {
+            
+            // Handle parameter replacement within macro calls
+            if (isValidMacroInvocation(bodyLine)) {
                 std::vector<std::string> nestedParamNames;
                 findParameters(bodyLine, nestedParamNames);
                 for (size_t i = 0; i < nestedParamNames.size(); ++i) {
+                    std::string nestedParam = nestedParamNames[i];
+                    // Find this parameter in the macro's parameter list
                     for (size_t j = 0; j < macro.parameters.size(); ++j) {
-                        std::string param = macro.parameters[j];
-                        std::string nestedParam = nestedParamNames[i];
-                        std::string arg = arguments[j];
-                        // only search after the first '('
-                        size_t searchStart = bodyLine.find(nestedParam, bodyLine.find('('));
-                        size_t pos = bodyLine.find(nestedParam, searchStart);
-                        if (pos != std::string::npos) {
-                            bodyLine.replace(pos, nestedParam.length(), arg);
+                        if (macro.parameters[j] == nestedParam) {
+                            std::string arg = arguments[j];
+                            // Replace the parameter in the macro call
+                            size_t paramStart = bodyLine.find(nestedParam, bodyLine.find('('));
+                            if (paramStart != std::string::npos) {
+                                bodyLine.replace(paramStart, nestedParam.length(), arg);
+                                break; // Found and replaced, move to next parameter
+                            }
                         }
                     }
                 }
@@ -429,7 +438,14 @@ void Assembler::parseMacroInvocation(const std::string& line, std::vector<std::s
         for (size_t i = 0; i < expandedBody.size(); ++i) {
             const auto& bodyLine = expandedBody[i];
             std::cout << "Adding line to instructions: " << bodyLine << std::endl;
-            instructions.push_back(bodyLine);
+            
+            // Check if this line is a nested macro call
+            if (isValidMacroInvocation(bodyLine)) {
+                // Recursively expand nested macro with the same insertSKZ flag
+                parseMacroInvocation(bodyLine, instructions, insertSKZ);
+            } else {
+                instructions.push_back(bodyLine);
+            }
             
             // Insert SKZ between lines if requested (but not after the last line)
             if (insertSKZ && i < expandedBody.size() - 1) {

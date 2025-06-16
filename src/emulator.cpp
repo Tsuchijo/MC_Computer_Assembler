@@ -501,7 +501,7 @@ void Emulator::handleTapeOperation(int dataLineIndex, bool isWrite) {
     
     if (dataLineIndex >= 2 && dataLineIndex <= 4) {
         // Tape 1 operations
-        if (dataLineIndex == 2 && registerValue) { // DA3 - move left
+        if (dataLineIndex == 2 && registerValue && isWrite) { // DA3 - move left
             tape1.moveLeft();
         } else if (dataLineIndex == 3) { // DA4 - read/write
             if (isWrite) {
@@ -509,20 +509,20 @@ void Emulator::handleTapeOperation(int dataLineIndex, bool isWrite) {
             } else {
                 registerValue = tape1.read();
             }
-        } else if (dataLineIndex == 4 && registerValue) { // DA5 - move right
+        } else if (dataLineIndex == 4 && registerValue && isWrite) { // DA5 - move right
             tape1.moveRight();
         }
     } else if (dataLineIndex >= 5 && dataLineIndex <= 7) {
         // Tape 2 operations
-        if (dataLineIndex == 5) { // DA6 - move left
+        if (dataLineIndex == 5 && registerValue && isWrite) { // DA6 - move left
             tape2.moveLeft();
-        } else if (dataLineIndex == 6 && registerValue) { // DA7 - read/write
+        } else if (dataLineIndex == 6) { // DA7 - read/write
             if (isWrite) {
                 tape2.write(registerValue);
             } else {
                 registerValue = tape2.read();
             }
-        } else if (dataLineIndex == 7 && registerValue) { // DA8 - move right
+        } else if (dataLineIndex == 7 && registerValue && isWrite) { // DA8 - move right
             tape2.moveRight();
         }
     }

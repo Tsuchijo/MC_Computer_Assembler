@@ -12,7 +12,7 @@ end
 
 DA8
 LD 
-DA2        ; Select SKIP flag
+DA1        ; Select SKIP flag
 LD         ; Load SKIP flag value
 SKZ        ; Skip next if SKIP flag is HIGH
 DA3
@@ -24,7 +24,7 @@ NOT
 AND 
 DA4
 XOR
-DA2
+DA1
 XOR 
 OUT 
 abc(SKZ, SKZ, SKZ)

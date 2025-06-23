@@ -13,17 +13,17 @@ DA5        ; Select Tape #1 Right Shift
 OUT        ; Move head right
 
 ; Test HALT flag
-DA1        ; Select HALT flag
+DA2        ; Select HALT flag
 LD         ; Load current HALT flag value
 NOT        ; Invert to set HALT
-DA1        ; Select HALT flag again
+DA2        ; Select HALT flag again
 OUT        ; Set HALT flag
 
 ; Test SKIP flag operation
-DA2        ; Select SKIP flag
+DA1        ; Select SKIP flag
 LD         ; Load SKIP flag (should be 0)
 NOT        ; Set to 1
-DA2        ; Select SKIP flag again  
+DA1        ; Select SKIP flag again  
 OUT        ; Write SKIP flag
 SKZ        ; This should skip next instruction
 AND        ; This should be skipped

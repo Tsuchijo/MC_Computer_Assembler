@@ -9,7 +9,7 @@ def increment_tape(LEFT, WRITE, RIGHT)
     OUT ; Toggle value in the tape
     LD ; LD value
     NOT ; if toggled 1-0 then propagate to next bit
-    DA1 ; store in DA1
+    DA2 ; store in DA1
     OUT
     LD
     XOR
@@ -17,13 +17,13 @@ def increment_tape(LEFT, WRITE, RIGHT)
     LEFT
     OUT;index the tape one to the left
 
-    DA1
+    DA2
     LD 
     WRITE 
     OUT
     LD 
     NOT 
-    DA1 ; store in DA1
+    DA2 ; store in DA1
     AND ; if DA1 is high and the value written is high then store high
     OUT
     LD
@@ -32,13 +32,13 @@ def increment_tape(LEFT, WRITE, RIGHT)
     LEFT
     OUT;index the tape one to the left
 
-    DA1
+    DA2
     LD 
     WRITE 
     OUT
     LD 
     NOT 
-    DA1 ; store in DA1
+    DA2 ; store in DA1
     AND
     OUT
     LD
@@ -47,13 +47,13 @@ def increment_tape(LEFT, WRITE, RIGHT)
     LEFT
     OUT;index the tape one to the left
 
-    DA1
+    DA2
     LD 
     WRITE 
     OUT
     LD 
     NOT 
-    DA1 ; store in DA1
+    DA2 ; store in DA1
     AND
     OUT
 
@@ -76,7 +76,7 @@ def decrement_tape(LEFT, WRITE, RIGHT)
 
     OUT ; Toggle value in the tape
     LD ; LD value
-    DA1 ; store in DA1
+    DA2 ; store in DA1
     OUT
     LD
     XOR
@@ -84,12 +84,12 @@ def decrement_tape(LEFT, WRITE, RIGHT)
     LEFT
     OUT;index the tape one to the left
 
-    DA1
+    DA2
     LD 
     WRITE 
     OUT
     LD 
-    DA1 ; store in DA1
+    DA2 ; store in DA1
     AND ; if DA1 is high and the value written is high then store high
     OUT
     LD
@@ -98,12 +98,12 @@ def decrement_tape(LEFT, WRITE, RIGHT)
     LEFT
     OUT;index the tape one to the left
 
-    DA1
+    DA2
     LD 
     WRITE 
     OUT
     LD 
-    DA1 ; store in DA1
+    DA2 ; store in DA1
     AND
     OUT
     LD
@@ -112,12 +112,12 @@ def decrement_tape(LEFT, WRITE, RIGHT)
     LEFT
     OUT;index the tape one to the left
 
-    DA1
+    DA2
     LD 
     WRITE 
     OUT
     LD 
-    DA1 ; store in DA1
+    DA2 ; store in DA1
     AND
     OUT
 
@@ -186,7 +186,7 @@ def check_equality(one_val, two_val, three_val, four_val, LEFT, WRITE, RIGHT)
     WRITE
     one_val()
     XOR
-    DA1 ; store intermediate value in DA1, if any is high it will be high
+    DA2 ; store intermediate value in DA1, if any is high it will be high
     OUT
 
     index(LEFT) 
@@ -194,7 +194,7 @@ def check_equality(one_val, two_val, three_val, four_val, LEFT, WRITE, RIGHT)
     WRITE
     two_val()
     XOR
-    DA1
+    DA2
     OR
     OUT
     index(LEFT) 
@@ -202,7 +202,7 @@ def check_equality(one_val, two_val, three_val, four_val, LEFT, WRITE, RIGHT)
     WRITE
     three_val()
     XOR
-    DA1
+    DA2
     OR
     OUT
     index(LEFT) 
@@ -210,7 +210,7 @@ def check_equality(one_val, two_val, three_val, four_val, LEFT, WRITE, RIGHT)
     WRITE
     four_val()
     XOR
-    DA1
+    DA2
     OR
     OUT
     HIGH()
@@ -219,7 +219,7 @@ def check_equality(one_val, two_val, three_val, four_val, LEFT, WRITE, RIGHT)
     OUT
     OUT
 
-    DA1
+    DA2
     LD
     NOT
 end
@@ -229,7 +229,7 @@ end
 def branch_flag(one_val, two_val, three_val, four_val, LEFT, WRITE, RIGHT)
     check_equality(one_val, two_val, three_val, four_val, LEFT, WRITE, RIGHT)
     NOT
-    DA2
+    DA1
     OUT
     NOT
     NOT ; this will set skip flag to low only if the value provided is same as the value in the currently selected cell
@@ -240,7 +240,7 @@ end
 def jump_to(one_val, two_val, three_val, four_val, LEFT, WRITE, RIGHT)
     set_cell_values(one_val, two_val, three_val, four_val, LEFT, WRITE, RIGHT)
     HIGH()
-    DA2
+    DA1
     OUT
     NOT
     NOT
@@ -265,7 +265,7 @@ SKZ
 check_equality(LOW, LOW, LOW, LOW, DA3, DA4, DA5)
 
 SKZ
-DA2
+DA1
 SKZ
 NOT ; if NOT EQUAL then skip the jump to statement 
 SKZ
@@ -282,13 +282,13 @@ jump_to(HIGH, HIGH, HIGH, HIGH, DA6, DA7, DA8) ; if tape equals zero jump to hal
 ; finally halt program if last branch (1111) 
 branch_flag(HIGH, HIGH, HIGH, HIGH, DA6, DA7, DA8)
 ; set Halt flag low to prevent it from halting prematurely
-DA1
+DA2
 LD
 XOR 
 OUT
 
 SKZ
-DA1
+DA2
 SKZ
 LD
 SKZ

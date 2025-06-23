@@ -62,8 +62,8 @@ void Emulator::reset() {
 
 bool Emulator::step() {
     if (halted || programCounter >= static_cast<int>(instructions.size())) {
-        // Check HALT flag (DA1) before declaring halt
-        if (programCounter >= static_cast<int>(instructions.size()) && dataLines[0].memoryValue) {
+        // Check HALT flag (DA2) before declaring halt
+        if (programCounter >= static_cast<int>(instructions.size()) && dataLines[1].memoryValue) {
             halted = true;
             return false;
         }
@@ -377,8 +377,8 @@ void Emulator::executeXOR() {
 }
 
 void Emulator::executeSKZ() {
-    // Skip next instruction if SKIP flag (DA2 memory) is high
-    if (dataLines[1].memoryValue) {
+    // Skip next instruction if SKIP flag (DA1 memory) is high
+    if (dataLines[0].memoryValue) {
         skipNext = true;
     }
 }
